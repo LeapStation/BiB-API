@@ -1,0 +1,301 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BiB Integration API",
+    "description": "BiB Integration API",
+    "version": "2.0",
+    "contact": {
+      "name": "Steven Van den Berghe",
+      "url": "https://leapstation.eu",
+      "email": "steven@leapstation.eu"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://bib.mediligo.com"
+    }
+  ],
+  "paths": {
+    "/epd/access": {
+      "post": {
+        "summary": "Request a new access URL",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "On success, returns an object with url that is valid for a brief period of time, and opens the BiB tool for the configured user and patient dossier.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "get-epd-access",
+        "description": "This operation allows to request the state for a dossier. Note that both missing dossiers, and dossiers without active positive consent, will return a Not Found result.",
+        "security": [
+          {
+            "client-credentials": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "description": "Optional reference field of the dossier. Use this to link an internal dossier/patient number to the request (only used for debugging purposes for now).\n"
+                  },
+                  "actor": {
+                    "type": "object",
+                    "description": "Identifies the actor (user) requesting access.\n\nThe tool can use two fields for identification:\n* SSIN: RIZIV/INAMI identification code of the user. If the user has this, it is best to use this field.\n* UID: any other unique identifier for the user. Using this fields either gives limited access to the tool, or requires a RIZIV/INAMI identification to be linked to the profile later on.",
+                    "required": [
+                      "displayName"
+                    ],
+                    "properties": {
+                      "ssin": {
+                        "type": "string"
+                      },
+                      "uid": {
+                        "type": "string"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "organization": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "patient": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "object",
+                        "required": [
+                          "family",
+                          "given"
+                        ],
+                        "properties": {
+                          "family": {
+                            "type": "string"
+                          },
+                          "given": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "address": {
+                        "type": "object",
+                        "required": [
+                          "line",
+                          "city",
+                          "postalCode"
+                        ],
+                        "properties": {
+                          "line": {
+                            "type": "array",
+                            "description": "one or multiple lines describing street, housenumber and sometimes other specifications (e.g. building number)",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "postalCode": {
+                            "type": "string"
+                          },
+                          "country": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "RRN": {
+                        "type": "string",
+                        "description": "National registration or BIS number. Any non-numeric character in this entry will be automatically filtered out. If not present, the user will be asked to enter the \"Born-in-Brussels\" code."
+                      },
+                      "EDD": {
+                        "type": "string",
+                        "description": "Estimated delivery date in format \"YYYY-MM-DD\". If not present, the EDD is considered to be unknown."
+                      },
+                      "telecom": {
+                        "type": "object",
+                        "properties": {
+                          "system": {
+                            "type": "string",
+                            "enum": [
+                              "phone"
+                            ]
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "system",
+                          "value"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "actor",
+                  "patient"
+                ]
+              }
+            }
+          },
+          "description": "Object that describes\n* the user requesting access\n* the patient file to consult"
+        }
+      }
+    },
+    "/epd/state": {
+      "post": {
+        "summary": "",
+        "operationId": "post-epd-state",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "team": {
+                      "type": "boolean",
+                      "description": "Indicates if careteam is present"
+                    },
+                    "states": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string",
+                            "description": "Label indicating the carepath. \n* vulnipreg\\_communication: Communication\n* vulnipreg\\_legal\\_status: Legal status\n* vulnipreg\\_socioecon: Socio-economical\n* vulnipreg\\_housing: Housing\n* vulnipreg\\_social\\_support: Social support\n* vulnipreg\\_depression: Anxiety and depression\n* vulnipreg\\_medication: Medication\n* vulnipreg\\_substance: Substance abuse\n* vulnipreg\\_violence: Violence"
+                          },
+                          "state": {
+                            "type": "string",
+                            "description": "State of the carepath",
+                            "enum": [
+                              "suspicion",
+                              "nok",
+                              "ok",
+                              "inactive"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "state"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "team"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found, or no active positive consent"
+          }
+        },
+        "description": "Returns the known state of the dossier in the platform.",
+        "security": [
+          {
+            "client-credentials": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "description": "Optional reference field of the dossier. Use this to link an internal dossier/patient number to the request (only used for debugging purposes for now).\n"
+                  },
+                  "actor": {
+                    "type": "object",
+                    "description": "Identifies the actor (user) requesting access.\n\nThe tool can use two fields for identification:\n* SSIN: RIZIV/INAMI identification code of the user. If the user has this, it is best to use this field.\n* UID: any other unique identifier for the user. Using this fields either gives limited access to the tool, or requires a RIZIV/INAMI identification to be linked to the profile later on.",
+                    "required": [
+                      "displayName"
+                    ],
+                    "properties": {
+                      "ssin": {
+                        "type": "string"
+                      },
+                      "uid": {
+                        "type": "string"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "organization": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "patient": {
+                    "type": "object",
+                    "properties": {
+                      "RRN": {
+                        "type": "string",
+                        "description": "National registration or BIS number. Any non-numeric character in this entry will be automatically filtered out. If not present, the user will be asked to enter the \"Born-in-Brussels\" code."
+                      },
+                      "EDD": {
+                        "type": "string",
+                        "description": "Estimated delivery date in format \"YYYY-MM-DD\". If not present, the EDD is considered to be unknown."
+                      },
+                      "BIBCode": {
+                        "type": "string",
+                        "description": "Code to be used if RRN is unknown"
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "actor",
+                  "patient"
+                ]
+              }
+            }
+          },
+          "description": "Object that describes\n* the user requesting access\n* the patient file to consult"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {},
+    "securitySchemes": {
+      "client-credentials": {
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "",
+            "refreshUrl": "",
+            "scopes": {}
+          }
+        }
+      }
+    }
+  }
+}
